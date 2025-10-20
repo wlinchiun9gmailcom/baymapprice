@@ -1,0 +1,10 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type":"Feature",
+      "properties": { "name": "Berkeley", "cost": 128 },
+      "geometry": { "type": "Polygon", "coordinates": [[[ -122.31, 37.91 ], [ -122.23, 37.91 ], [ -122.23, 37.83 ], [ -122.31, 37.83 ], [ -122.31, 37.91 ]]] }
+    }
+  ]
+}

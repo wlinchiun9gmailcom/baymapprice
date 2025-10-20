@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type":"Feature",
+      "properties":{"name":"Berkeley","cost":128},
+      "geometry":{"type":"Polygon","coordinates":[[
+        [-122.319,37.914],[-122.225,37.914],[-122.225,37.827],[-122.319,37.827],[-122.319,37.914]
+      ]]}
+    },
+    {
+      "type":"Feature",
+      "properties":{"name":"Oakland","cost":110},
+      "geometry":{"type":"Polygon","coordinates":[[
+        [-122.320,37.885],[-122.185,37.885],[-122.185,37.730],[-122.320,37.730],[-122.320,37.885]
+      ]]}
+    }
+  ]
+}

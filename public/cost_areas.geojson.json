@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Downtown Berkeley", "cost": 128 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.2815,37.8749], [-122.2668,37.8749],
+          [-122.2668,37.8645], [-122.2815,37.8645],
+          [-122.2815,37.8749]
+        ]]
+      }
+    }
+  ]
+}

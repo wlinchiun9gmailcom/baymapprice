@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type":"Feature","properties":{"name":"Berkeley","cost":128},
+      "geometry":{"type":"Polygon","coordinates":[[
+        [-122.31,37.91],[-122.23,37.91],[-122.23,37.83],[-122.31,37.83],[-122.31,37.91]
+      ]]}
+    },
+    {
+      "type":"Feature","properties":{"name":"Oakland","cost":110},
+      "geometry":{"type":"Polygon","coordinates":[[
+        [-122.30,37.88],[-122.18,37.88],[-122.18,37.73],[-122.30,37.73],[-122.30,37.88]
+      ]]}
+    },
+    {
+      "type":"Feature","properties":{"name":"Albany","cost":105},
+      "geometry":{"type":"Polygon","coordinates":[[
+        [-122.32,37.90],[-122.28,37.90],[-122.28,37.88],[-122.32,37.88],[-122.32,37.90]
+      ]]}
+    },
+    {
+      "type":"Feature","properties":{"name":"Emeryville","cost":120},
+      "geometry":{"type":"Polygon","coordinates":[[
+        [-122.31,37.85],[-122.29,37.85],[-122.29,37.83],[-122.31,37.83],[-122.31,37.85]
+      ]]}
+    },
+    {
+      "type":"Feature","properties":{"name":"Richmond","cost":95},
+      "geometry":{"type":"Polygon","coordinates":[[
+        [-122.38,37.99],[-122.30,37.99],[-122.30,37.90],[-122.38,37.90],[-122.38,37.99]
+      ]]}
+    }
+  ]
+}
