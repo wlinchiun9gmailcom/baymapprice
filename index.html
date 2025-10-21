@@ -1,13 +1,160 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>baymap</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <title>City Prices — Nominatim Boundaries</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    .legend {
+      background: #ffffffee; padding: 10px 12px; border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.08);
+      font: 12px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .city-label {
+      pointer-events: none; white-space: nowrap; font-weight: 700; color: #1f2937;
+      text-shadow: 0 0 5px rgba(255,255,255,.95), 0 0 12px rgba(255,255,255,.95);
+    }
+    .status {
+      position: absolute; left: 10px; bottom: 10px; z-index: 1000;
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      padding: 8px 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      font: 12px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 380px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="status" class="status">Loading city boundaries…</div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ---------- 1) YOUR DATA ----------
+    // Edit values or add/remove cities freely.
+    const STATE = "California";
+    const COUNTRY = "United States";
+    const CITY_PRICES = {
+      "Berkeley":   128,
+      "Oakland":    110,
+      "Albany":     106,
+      "El Cerrito": 102,
+      "Emeryville": 120,
+      "Richmond":    95,
+      "Piedmont":   126,
+      "Alameda":    103,
+      "Orinda":     118,
+      "Kensington": 112
+    };
+    const EMAIL = "linchiunwang@berkeley.edu"; // <-- replace with your contact email (Nominatim policy)
+
+    // ---------- 2) MAP ----------
+    const map = L.map('map', { center: [37.8715, -122.2730], zoom: 12 });
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; OSM & CARTO', maxZoom: 19
+    }).addTo(map);
+
+    const statusEl = document.getElementById('status');
+    const group = L.layerGroup().addTo(map);
+
+    // ---------- 3) Color scale ----------
+    const prices = Object.values(CITY_PRICES).filter(Number.isFinite);
+    const minP = Math.min(...prices), maxP = Math.max(...prices);
+    function colorFor(p) {
+      if (!Number.isFinite(p)) return "#ccc";
+      if (minP === maxP) return "#555";
+      const t = (p - minP) / (maxP - minP);           // 0..1
+      const v = Math.round(255 - t * 180);            // 255 → 75 (light → dark)
+      return `rgb(${v},${v},${v})`;
+    }
+    function fmt(v){ return Number(v).toLocaleString(); }
+
+    function addLegend() {
+      const steps = 6, ctrl = L.control({ position:'bottomright' });
+      ctrl.onAdd = () => {
+        const div = L.DomUtil.create('div','legend');
+        const step = (maxP - minP) / steps || 1;
+        let html = `<div style="font-weight:700;margin-bottom:6px">Price (dark = higher)</div>`;
+        for (let i = 0; i < steps; i++) {
+          const from = minP + i*step, to = i===steps-1 ? null : minP + (i+1)*step;
+          const label = to ? `${fmt(from)}–${fmt(to)}` : `${fmt(from)}+`;
+          html += `<div style="display:flex;align-items:center;margin:2px 0">
+            <span style="display:inline-block;width:14px;height:14px;background:${colorFor(from)};
+            border:1px solid #0002;margin-right:6px"></span>${label}</div>`;
+        }
+        div.innerHTML = html; return div;
+      };
+      ctrl.addTo(map);
+    }
+
+    function labelAtCenter(layer, text) {
+      const c = layer.getBounds().getCenter();
+      const icon = L.divIcon({ className:'city-label', html:`<span>${text}</span>`, iconSize:[0,0] });
+      return L.marker([c.lat, c.lng], { icon, interactive:false });
+    }
+
+    // ---------- 4) Nominatim city boundary fetch ----------
+    // We'll use the structured search with q="<city>, <state>, <country>" and request polygon GeoJSON.
+    async function fetchCityGeoJSON(city) {
+      const q = encodeURIComponent(`${city}, ${STATE}, ${COUNTRY}`);
+      const url = `https://nominatim.openstreetmap.org/search.php?q=${q}&polygon_geojson=1&format=jsonv2&email=${encodeURIComponent(EMAIL)}&limit=5&addressdetails=1`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+      if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`);
+      const arr = await res.json();
+
+      // Prioritize admin boundary relations with polygons, in the right state/country.
+      const candidate = arr.find(it =>
+        it.geojson &&
+        (it.class === 'boundary' || it.type === 'administrative') &&
+        it.address && (it.address.state === STATE || it.display_name.includes(STATE))
+      ) || arr.find(it => it.geojson);
+
+      if (!candidate) throw new Error(`No polygon result for ${city}`);
+      return candidate.geojson; // GeoJSON geometry object
+    }
+
+    function pause(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    (async function main(){
+      const cityNames = Object.keys(CITY_PRICES);
+      const failures = [];
+      let count = 0;
+
+      for (const name of cityNames) {
+        try {
+          statusEl.textContent = `Loading ${name}… (${++count}/${cityNames.length})`;
+          // gentle delay to be nice to Nominatim (rate-limited service)
+          await pause(600);
+          const geom = await fetchCityGeoJSON(name);
+
+          const price = CITY_PRICES[name];
+          const layer = L.geoJSON(geom, {
+            style: { color: "#6b7280", weight: 1.25, fillColor: colorFor(price), fillOpacity: .85 }
+          }).addTo(group);
+
+          layer.bindPopup(`<b>${name}</b><br/>Price: ${fmt(price)}`);
+          layer.on('mouseover', () => layer.setStyle({ weight:2, color:'#374151' }));
+          layer.on('mouseout',  () => layer.setStyle({ weight:1.25, color:'#6b7280' }));
+
+          labelAtCenter(layer, name).addTo(group);
+        } catch (e) {
+          console.error(e);
+          failures.push(name);
+        }
+      }
+
+      if (group.getLayers().length) {
+        map.fitBounds(group.getBounds().pad(0.15));
+        addLegend();
+      }
+
+      if (failures.length) {
+        statusEl.textContent = `Rendered ${cityNames.length - failures.length} cities. Missing: ${failures.join(', ')}. (Check spelling/official names; some CDPs use different labels.)`;
+      } else {
+        statusEl.style.display = 'none';
+      }
+    })();
+  </script>
+</body>
 </html>
